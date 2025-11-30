@@ -1,0 +1,8 @@
+Feature: version-command
+Created: 2025-11-29
+
+Session 1 (2025-11-29):
+Planning session. Ran phases 1-4.
+Architecture chosen: Create commands/version.md that instructs Claude to read marketplace.json and display version info.
+Created feature_list.json with 1 item.
+Next: 001 (Create version.md command file)
