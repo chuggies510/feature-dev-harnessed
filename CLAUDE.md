@@ -48,8 +48,17 @@ The command auto-detects state from the filesystem:
 
 ## Runtime Artifacts (gitignored)
 
-- `feature_list.json`: Machine-readable work items with verification commands
+- `feature_list.json`: Machine-readable work items with verification commands and optional `init_script` field
 - `claude-progress.txt`: Human-readable append-only session log
+- `init.sh`: Optional startup script referenced by `feature_list.json`'s `init_script` field
+
+## Key Behaviors
+
+- **Smoke tests**: Each implementation session runs all previous verifications before new work
+- **Auto-fix regressions**: If a smoke test fails, stop all new work and fix the regression until all smoke tests pass
+- **Never delete or modify tests**: Removing or weakening existing tests leads to missing or buggy functionality - only add new tests
+- **Granular items**: Aim for 10-20+ items for complex features; prefer too many small items over too few large ones
+- **Browser verification**: For web apps, prefer Playwright/Puppeteer over unit tests for end-to-end verification
 
 ## Installation
 

@@ -40,6 +40,7 @@ Before doing anything else, detect current state:
 - **Read files identified by agents**: When launching agents, ask them to return lists of the most important files to read. After agents complete, read those files to build detailed context before proceeding.
 - **Simple and elegant**: Prioritize readable, maintainable, architecturally sound code
 - **Use TodoWrite**: Track all progress throughout
+- **NEVER delete or modify tests**: It is unacceptable to remove or edit existing tests as this could lead to missing or buggy functionality. Add new tests, never remove or weaken existing ones.
 
 ---
 
@@ -126,6 +127,7 @@ If the user says "whatever you think is best", provide your recommendation and g
      "feature": "descriptive name of the feature",
      "created": "YYYY-MM-DD",
      "architecture": "brief description of chosen approach from phase 4",
+     "init_script": "optional - path to startup script (e.g., ./init.sh)",
      "items": [
        {
          "id": "001",
@@ -137,10 +139,21 @@ If the user says "whatever you think is best", provide your recommendation and g
      ]
    }
    ```
-3. Break implementation into session-sized work items (completable in one context window)
+3. Break implementation into **many small, granular items** (aim for 10-20+ items for complex features)
+   - Each item should be completable in one context window
+   - Prefer too many small items over too few large ones
+   - Small items reduce risk of half-implemented features breaking the next session
 4. Each item must have a verification command that returns exit code 0 for success
+   - For web apps: prefer browser automation (Playwright, Puppeteer) over unit tests
+   - Verify end-to-end user actions, not just code-level tests
+   - Example: `npx playwright test tests/csv-export.spec.ts` or `python -m pytest tests/test_e2e.py`
 5. Order items by dependency (items that depend on others come later)
-6. Create `claude-progress.txt` with initial entry:
+6. If the project needs a startup script, create `init.sh` with:
+   - Application startup commands
+   - Basic health checks
+   - Any environment setup
+   - Make it executable: `chmod +x init.sh`
+7. Create `claude-progress.txt` with initial entry:
    ```
    Feature: [feature name]
    Created: [date]
@@ -151,8 +164,8 @@ If the user says "whatever you think is best", provide your recommendation and g
    Created feature_list.json with [N] items.
    Next: [first item id] ([first item description])
    ```
-7. Ask user: "Ready to commit artifacts? Proceed?"
-8. If approved, git commit with message: `plan: create feature_list.json for [feature-name]`
+8. Ask user: "Ready to commit artifacts? Proceed?"
+9. If approved, git commit with message: `plan: create feature_list.json for [feature-name]`
 
 **Planning session ends. Run this command again to start implementation.**
 
@@ -162,20 +175,24 @@ If the user says "whatever you think is best", provide your recommendation and g
 
 Execute this section when `feature_list.json` exists AND has items with status "pending".
 
-## Step 1: Read State
+## Step 1: Read State and Initialize
 
 **Actions**:
 1. Read `feature_list.json` to understand items and their status
 2. Read `claude-progress.txt` to understand context and previous work
-3. Read recent git log to see commits since last session
+3. Read recent git log (last 20 commits) to see changes since last session
 4. Determine current session number by counting "Session N" entries in `claude-progress.txt`
 5. Display: "Session [N]: Implementation"
+6. If `init_script` is defined in `feature_list.json`, run it to start the development environment
+   - If init script fails, debug and fix before proceeding
 
 ---
 
 ## Step 2: Smoke Tests
 
-**Goal**: Verify previously completed work still passes
+**Goal**: Verify previously completed work still passes, fix any regressions
+
+**Prerequisite**: Init script (if defined) must have completed successfully in Step 1.
 
 **Actions**:
 1. For each item in `feature_list.json` with status "pass":
@@ -184,8 +201,12 @@ Execute this section when `feature_list.json` exists AND has items with status "
 2. If ANY smoke test fails:
    - Report: "REGRESSION DETECTED: Item [id] verification failed"
    - Display the failed command and output
-   - **STOP. Do not proceed with new work.**
-   - Inform user: "A previously passing item is now failing. Please investigate before continuing."
+   - **FIX THE REGRESSION BEFORE PROCEEDING**:
+     - Analyze what broke and why
+     - Fix the issue while preserving all existing functionality
+     - Re-run the failed verification until it passes
+     - Re-run ALL smoke tests to ensure fix didn't break something else
+   - Once all smoke tests pass, continue to next step
 3. If all smoke tests pass (or no items have status "pass" yet):
    - Report: "Smoke tests: [N] passed" (or "Smoke tests: N/A (first implementation session)")
    - Continue to next step
@@ -352,6 +373,7 @@ Execute this section when `claude-progress.txt` contains "Feature complete".
   "feature": "string - descriptive name of the feature",
   "created": "string - ISO date (YYYY-MM-DD)",
   "architecture": "string - brief description of chosen approach",
+  "init_script": "string (optional) - path to startup script (e.g., ./init.sh)",
   "items": [
     {
       "id": "string - sequential identifier (001, 002, etc.)",
@@ -367,8 +389,9 @@ Execute this section when `claude-progress.txt` contains "Feature complete".
 **Rules**:
 - `id`, `description`, and `verification` fields are IMMUTABLE after creation
 - Only `status` and `session_completed` may be modified
-- Items must be session-sized (completable in one context window)
+- Aim for 10-20+ items for complex features; prefer too many small items over too few large ones
 - Items must be ordered by dependency
+- For web apps, prefer browser automation (Playwright, Puppeteer) verification over unit tests
 
 ## claude-progress.txt Format
 

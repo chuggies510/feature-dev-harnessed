@@ -233,6 +233,7 @@ Machine-readable work items with verification commands. Created in planning sess
   "feature": "csv-export-for-cost-reports",
   "created": "2025-11-29",
   "architecture": "Pragmatic balance: Add CSV formatter utility...",
+  "init_script": "./init.sh",
   "items": [
     {
       "id": "001",
@@ -287,9 +288,11 @@ Then run the command with a new feature description.
 
 ## Handling Failures
 
-**Smoke test failure**: If a previously passing item fails, the command stops and reports the regression. Investigate and fix before continuing.
+**Smoke test failure (regression)**: Claude stops all new work and fixes the regression until all smoke tests pass. No new items can be implemented until regressions are resolved.
 
-**Verification failure**: The command will debug and retry until the verification passes. If stuck, you can manually intervene.
+**Verification failure**: Claude will debug and retry until the verification passes. If stuck, you can manually intervene.
+
+**Init script failure**: If `init.sh` fails to start the development environment, Claude will debug and fix before proceeding.
 
 **Mid-feature abandonment**: Delete `feature_list.json` and `claude-progress.txt` to start over, or leave them to resume later.
 
@@ -348,9 +351,14 @@ Verification commands determine if an item is complete. They should:
 - **Return exit code 0 on success, non-zero on failure**
 - **Be specific to the item's deliverable**
 - **Be runnable from the project root**
+- **For web apps: prefer browser automation over unit tests**
 
 Good examples:
 ```bash
+# Browser automation (preferred for web apps)
+npx playwright test tests/csv-export.spec.ts
+python -m pytest tests/test_e2e.py --headed
+
 # Import check
 python3 -c 'from utils.csv_formatter import format_csv'
 
@@ -371,23 +379,59 @@ python3 -c 'import utils'
 
 # Manual verification - can't be automated
 echo "Check if the button looks right"
+
+# Unit test when E2E would be better (for web features)
+python3 -c 'assert CsvFormatter().format([]) == ""'  # Doesn't verify UI works
 ```
+
+### Using init.sh
+
+For projects that need environment setup, create an `init.sh` script:
+
+```bash
+#!/bin/bash
+# Start development server
+npm run dev &
+
+# Wait for server to be ready
+sleep 3
+
+# Health check
+curl -s http://localhost:3000/health || exit 1
+
+echo "Development environment ready"
+```
+
+Reference it in `feature_list.json`:
+```json
+{
+  "init_script": "./init.sh",
+  ...
+}
+```
+
+Claude will run this at the start of each implementation session.
 
 ### Sizing Work Items
 
-Items should be completable in one context window. Signs an item is too large:
+**Aim for 10-20+ items for complex features.** Prefer too many small items over too few large ones. Small items reduce risk of half-implemented features breaking the next session.
+
+Signs an item is too large:
 - Touches more than 3-4 files
 - Requires multiple sub-tasks
 - Has complex verification logic
+- Would take more than ~30 minutes to implement
 
 Split large items into smaller ones during planning.
 
 ### Session Continuity
 
-Between sessions, Claude recovers context by reading:
-1. `feature_list.json` - what's done, what's next
-2. `claude-progress.txt` - decisions made, context from previous sessions
-3. Recent git log - what changed since last session
+Between sessions, Claude recovers context by:
+1. Reading `feature_list.json` - what's done, what's next
+2. Reading `claude-progress.txt` - decisions made, context from previous sessions
+3. Reading recent git log (20 commits) - what changed since last session
+4. Running `init.sh` (if defined) - starting the development environment
+5. Running smoke tests - verifying all previous work still passes
 
 Write clear progress entries to help future sessions understand context.
 
@@ -398,6 +442,7 @@ Write clear progress entries to help future sessions understand context.
 - **Trust the architecture recommendation**: It's based on actual codebase analysis
 - **Review agent outputs**: Agents surface insights about your codebase you might not know
 - **Don't skip phases**: Each phase builds context for the next
+- **Never delete or modify existing tests**: Add new tests, never remove or weaken existing ones
 
 ## Technical Details
 
