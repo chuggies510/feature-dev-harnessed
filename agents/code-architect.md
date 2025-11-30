@@ -1,0 +1,1 @@
+../vendor/claude-code/plugins/feature-dev/agents/code-architect.md
