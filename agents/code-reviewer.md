@@ -1,1 +1,0 @@
-../vendor/claude-code/plugins/feature-dev/agents/code-reviewer.md

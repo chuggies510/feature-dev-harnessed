@@ -45,12 +45,13 @@ Fork feature-dev. Keep phases 1-4 and 6-7 exactly as Anthropic designed them. Re
    - Clarify feature requirements with user
    - Summarize understanding and confirm
 
-2. **Phase 2: Codebase Exploration** (from feature-dev, unchanged)
+2. **Phase 2: Codebase Exploration** (from feature-dev, extended)
    - Launch 2-3 code-explorer agents in parallel
    - Each agent traces through code comprehensively
    - Each agent returns 5-10 key files to read
    - Read all identified files
-   - Present comprehensive summary of findings
+   - **Detect project version**: Search for version files (pyproject.toml, package.json, VERSION, etc.)
+   - Present comprehensive summary of findings **including current version**
 
 3. **Phase 3: Clarifying Questions** (from feature-dev, unchanged)
    - Review codebase findings and original request
@@ -58,7 +59,7 @@ Fork feature-dev. Keep phases 1-4 and 6-7 exactly as Anthropic designed them. Re
    - Present all questions to user in organized list
    - Wait for answers before proceeding
 
-4. **Phase 4: Architecture Design** (from feature-dev, unchanged)
+4. **Phase 4: Architecture Design** (from feature-dev, extended)
    - Launch 2-3 code-architect agents in parallel with different focuses:
      - Minimal changes (smallest change, maximum reuse)
      - Clean architecture (maintainability, elegant abstractions)
@@ -66,19 +67,25 @@ Fork feature-dev. Keep phases 1-4 and 6-7 exactly as Anthropic designed them. Re
    - Review all approaches
    - Present trade-offs comparison with recommendation
    - Ask user which approach they prefer
-   - User approves architecture
+   - **After architecture approval, suggest target version**:
+     - Analyze feature scope (PATCH for bug fixes, MINOR for features, MAJOR for breaking changes)
+     - Present suggestion: "Current version is X.Y.Z. This is a [scope], recommend [target]. Confirm?"
+   - User approves architecture and version
 
 5. **Artifact Creation** (new, replaces start of phase 5)
-   - Convert approved architecture into `feature_list.json`:
-     - Break implementation into session-sized work items
+   - Create `.feature-dev/active/` directory
+   - Convert approved architecture into `.feature-dev/active/feature_list.json`:
+     - Include `current_version` and `target_version` from Phase 4
+     - Include `version_files` array listing all detected version files
+     - Break implementation into session-sized work items (aim for 10-20+ for complex features)
      - Each item has a verification command that returns pass/fail
      - All items start with status "pending"
-   - Create initial `claude-progress.txt` entry documenting:
-     - Feature name and date
+   - Create initial `.feature-dev/active/claude-progress.txt` entry documenting:
+     - Feature name, version info, and date
      - Architecture approach chosen
      - Number of items created
      - What the next session should work on
-   - Git commit artifacts with message: "plan: create feature_list.json for [feature-name]"
+   - Git commit artifacts with message: "plan: create feature_list.json for [feature-name] (v[target_version])"
 
 **Session ends.**
 
@@ -160,20 +167,31 @@ Fork feature-dev. Keep phases 1-4 and 6-7 exactly as Anthropic designed them. Re
    - Present findings to user: "fix now", "fix later", or "proceed as-is"
    - Address issues based on user decision
 
-3. **Phase 7: Summary** (from feature-dev, unchanged)
+3. **Phase 7: Summary and Finalization** (from feature-dev, extended)
    - Mark all todos complete
    - Summarize:
      - What was built
      - Key decisions made
      - Files modified
      - Suggested next steps
+   - **Bump version in all version files**:
+     - Read `target_version` and `version_files` from feature_list.json
+     - Update each file (pyproject.toml, package.json, VERSION, etc.)
+   - **Update CHANGELOG.md**:
+     - Create if doesn't exist
+     - Prepend new version section with feature summary
 
-4. **Final State Update**
+4. **Archive and Final State Update**
    - Append to `claude-progress.txt`:
+     - "Version bumped: [current] → [target]"
      - "Feature complete"
      - Code review findings and resolutions
-     - Final summary
-   - Git commit with message: "feat: complete [feature-name] - code review passed"
+   - **Archive feature artifacts**:
+     - Create `.feature-dev/completed/[target_version]-[feature]/`
+     - Move feature_list.json and claude-progress.txt to archive
+     - Remove `.feature-dev/active/` directory
+   - Git commit with message: "feat: complete [feature-name] v[target_version]"
+   - Suggest creating git tag: `git tag v[target_version]`
 
 **Feature done.**
 
@@ -185,25 +203,48 @@ The command determines which phase to execute based on filesystem state:
 
 | Condition | State | Action |
 |-----------|-------|--------|
-| `feature_list.json` does not exist | New feature | Run phases 1-4, create artifacts |
+| `.feature-dev/active/feature_list.json` does not exist | New feature | Run phases 1-4, create artifacts |
 | `feature_list.json` exists AND has items with status "pending" | Mid-implementation | Run one implementation cycle |
 | `feature_list.json` exists AND all items have status "pass" AND `claude-progress.txt` does not contain "Feature complete" | Ready for review | Run phases 6-7 |
-| `claude-progress.txt` contains "Feature complete" | Complete | Display summary, offer to start new feature or exit |
+| `claude-progress.txt` contains "Feature complete" | Complete | Archive to `.feature-dev/completed/`, display summary |
+
+**Artifact locations:**
+- During development: `.feature-dev/active/`
+- After completion: `.feature-dev/completed/{version}-{feature}/`
 
 ---
 
 ## Artifact Specifications
 
+### Directory Structure
+
+```
+.feature-dev/
+├── active/                              # Current feature in progress
+│   ├── feature_list.json
+│   ├── claude-progress.txt
+│   └── init.sh                          # Optional startup script
+└── completed/                           # Archived completed features
+    └── v3.2.0-csv-export/
+        ├── feature_list.json
+        └── claude-progress.txt
+```
+
 ### feature_list.json
 
-Location: Project root (same directory where command is invoked)
+Location: `.feature-dev/active/feature_list.json` (during development)
+Archived to: `.feature-dev/completed/{version}-{feature}/feature_list.json`
 
 Schema:
 ```json
 {
   "feature": "string - descriptive name of the feature",
   "created": "string - ISO date (YYYY-MM-DD)",
+  "current_version": "string - version detected at start (e.g., 3.1.1)",
+  "target_version": "string - user-approved target version (e.g., 3.2.0)",
+  "version_files": ["array - files containing version (e.g., pyproject.toml, .claude/VERSION)"],
   "architecture": "string - brief description of chosen approach from phase 4",
+  "init_script": "string (optional) - path to startup script",
   "items": [
     {
       "id": "string - sequential identifier (001, 002, etc.)",
@@ -217,18 +258,22 @@ Schema:
 ```
 
 Rules:
-- Item `id`, `description`, and `verification` fields are immutable after creation
+- `id`, `description`, `verification`, `current_version`, `target_version`, `version_files` are immutable after creation
 - Only `status` and `session_completed` fields may be modified
 - Verification commands must be executable in the project directory
 - Verification commands must return exit code 0 for success, non-zero for failure
 - Items must be session-sized: completable within one context window
 - Items should be ordered by dependency (items that depend on others come later)
+- Aim for 10-20+ items for complex features
 
 Example:
 ```json
 {
   "feature": "csv-export-for-cost-reports",
   "created": "2025-11-29",
+  "current_version": "3.1.1",
+  "target_version": "3.2.0",
+  "version_files": ["pyproject.toml", ".claude/VERSION"],
   "architecture": "Pragmatic balance: Add CSV formatter utility, wire to existing report UI with minimal changes to current architecture",
   "items": [
     {
@@ -258,13 +303,15 @@ Example:
 
 ### claude-progress.txt
 
-Location: Project root (same directory as feature_list.json)
+Location: `.feature-dev/active/claude-progress.txt` (during development)
+Archived to: `.feature-dev/completed/{version}-{feature}/claude-progress.txt`
 
 Format: Plain text, human-readable, append-only
 
 Structure:
 ```
 Feature: [feature name from feature_list.json]
+Version: [current_version] → [target_version]
 Created: [date]
 
 Session [N] ([date]):
@@ -276,6 +323,8 @@ Next: [What the next session should work on]
 Session [N+1] ([date]):
 ...
 ```
+
+The phrase "Feature complete" in this file triggers archival to `.feature-dev/completed/`.
 
 Rules:
 - Append-only: never edit or delete previous session entries

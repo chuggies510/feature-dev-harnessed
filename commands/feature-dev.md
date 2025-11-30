@@ -10,10 +10,10 @@ You are helping a developer implement a new feature using a multi-session harnes
 ## How This Works
 
 This command detects state from the filesystem and executes the appropriate phase:
-- **No `feature_list.json`**: Run planning phases (1-4), then create artifacts
+- **No `.feature-dev/active/feature_list.json`**: Run planning phases (1-4), then create artifacts
 - **`feature_list.json` with pending items**: Run one implementation cycle
 - **All items complete, not reviewed**: Run quality review phases (6-7)
-- **Feature complete**: Display summary
+- **Feature complete**: Archive and summarize
 
 ---
 
@@ -21,15 +21,17 @@ This command detects state from the filesystem and executes the appropriate phas
 
 Before doing anything else, detect current state:
 
-1. Check if `feature_list.json` exists in the current directory
+1. Check if `.feature-dev/active/feature_list.json` exists
 2. If it exists, read it and check item statuses
-3. If `claude-progress.txt` exists, check if it contains "Feature complete"
+3. If `.feature-dev/active/claude-progress.txt` exists, check if it contains "Feature complete"
 
 **State determination:**
-- If `feature_list.json` does NOT exist → Execute **Planning Session**
+- If `.feature-dev/active/feature_list.json` does NOT exist → Execute **Planning Session**
 - If `feature_list.json` exists AND has items with status "pending" → Execute **Implementation Session**
 - If `feature_list.json` exists AND all items have status "pass" AND `claude-progress.txt` does NOT contain "Feature complete" → Execute **Review Session**
 - If `claude-progress.txt` contains "Feature complete" → Execute **Complete State**
+
+**Artifact location:** All feature development artifacts are stored in `.feature-dev/active/` during development. On completion, they are archived to `.feature-dev/completed/{version}-{feature}/`.
 
 ---
 
@@ -81,7 +83,18 @@ Initial request: $ARGUMENTS
    - "Identify UI patterns, testing approaches, or extension points relevant to [feature]"
 
 2. Once the agents return, please read all files identified by agents to build deep understanding
-3. Present comprehensive summary of findings and patterns discovered
+
+3. **Detect project version** (for version tracking):
+   - Search for version files: `pyproject.toml`, `package.json`, `VERSION`, `setup.py`, `Cargo.toml`, `.claude/VERSION`
+   - Extract current version number (e.g., "3.1.1" or "1.0.0")
+   - Note which files contain version info (may be multiple)
+   - If no version files found, note "no version tracking detected"
+   - Store findings for use in Phase 4
+
+4. Present comprehensive summary of findings and patterns discovered, including:
+   - Codebase architecture and patterns
+   - Current version: [version] (from [file])
+   - Version files found: [list]
 
 ---
 
@@ -110,6 +123,15 @@ If the user says "whatever you think is best", provide your recommendation and g
 2. Review all approaches and form your opinion on which fits best for this specific task (consider: small fix vs large feature, urgency, complexity, team context)
 3. Present to user: brief summary of each approach, trade-offs comparison, **your recommendation with reasoning**, concrete implementation differences
 4. **Ask user which approach they prefer**
+5. **After architecture approval, suggest target version**:
+   - Use version detected in Phase 2
+   - Analyze feature scope to determine bump type:
+     - **PATCH** (x.y.Z → x.y.Z+1): Bug fixes, documentation, minor tweaks
+     - **MINOR** (x.Y.z → x.Y+1.0): New features, enhancements, backward-compatible changes
+     - **MAJOR** (X.y.z → X+1.0.0): Breaking changes, major rewrites, API changes
+   - Present suggestion: "Current version is [version]. This is a [scope] change (new feature/bug fix/major rewrite). Recommend [target version]. Confirm?"
+   - If no version files detected: "No version tracking detected. Skip versioning, or create VERSION file starting at 1.0.0?"
+   - Store user's confirmed target version for Phase 5
 
 ---
 
@@ -117,15 +139,22 @@ If the user says "whatever you think is best", provide your recommendation and g
 
 **Goal**: Convert approved architecture into multi-session execution artifacts
 
-**DO NOT START WITHOUT USER APPROVAL OF ARCHITECTURE**
+**DO NOT START WITHOUT USER APPROVAL OF ARCHITECTURE AND VERSION**
 
 **Actions**:
-1. Wait for explicit user approval of architecture approach
-2. Create `feature_list.json` with the following structure:
+1. Wait for explicit user approval of architecture approach and target version
+2. Create `.feature-dev/active/` directory if it doesn't exist
+3. Create `.feature-dev/active/feature_list.json` with the following structure:
    ```json
    {
      "feature": "descriptive name of the feature",
      "created": "YYYY-MM-DD",
+     "current_version": "version detected in Phase 2 (e.g., 3.1.1)",
+     "target_version": "user-approved version from Phase 4 (e.g., 3.2.0)",
+     "version_files": [
+       "pyproject.toml",
+       ".claude/VERSION"
+     ],
      "architecture": "brief description of chosen approach from phase 4",
      "init_script": "optional - path to startup script (e.g., ./init.sh)",
      "items": [
@@ -139,23 +168,24 @@ If the user says "whatever you think is best", provide your recommendation and g
      ]
    }
    ```
-3. Break implementation into **many small, granular items** (aim for 10-20+ items for complex features)
+4. Break implementation into **many small, granular items** (aim for 10-20+ items for complex features)
    - Each item should be completable in one context window
    - Prefer too many small items over too few large ones
    - Small items reduce risk of half-implemented features breaking the next session
-4. Each item must have a verification command that returns exit code 0 for success
+5. Each item must have a verification command that returns exit code 0 for success
    - For web apps: prefer browser automation (Playwright, Puppeteer) over unit tests
    - Verify end-to-end user actions, not just code-level tests
    - Example: `npx playwright test tests/csv-export.spec.ts` or `python -m pytest tests/test_e2e.py`
-5. Order items by dependency (items that depend on others come later)
-6. If the project needs a startup script, create `init.sh` with:
+6. Order items by dependency (items that depend on others come later)
+7. If the project needs a startup script, create `init.sh` with:
    - Application startup commands
    - Basic health checks
    - Any environment setup
    - Make it executable: `chmod +x init.sh`
-7. Create `claude-progress.txt` with initial entry:
+8. Create `.feature-dev/active/claude-progress.txt` with initial entry:
    ```
    Feature: [feature name]
+   Version: [current_version] → [target_version]
    Created: [date]
 
    Session 1 ([date]):
@@ -164,8 +194,8 @@ If the user says "whatever you think is best", provide your recommendation and g
    Created feature_list.json with [N] items.
    Next: [first item id] ([first item description])
    ```
-8. Ask user: "Ready to commit artifacts? Proceed?"
-9. If approved, git commit with message: `plan: create feature_list.json for [feature-name]`
+9. Ask user: "Ready to commit artifacts? Proceed?"
+10. If approved, git commit with message: `plan: create feature_list.json for [feature-name] (v[target_version])`
 
 **Planning session ends. Run this command again to start implementation.**
 
@@ -173,13 +203,13 @@ If the user says "whatever you think is best", provide your recommendation and g
 
 # Implementation Session
 
-Execute this section when `feature_list.json` exists AND has items with status "pending".
+Execute this section when `.feature-dev/active/feature_list.json` exists AND has items with status "pending".
 
 ## Step 1: Read State and Initialize
 
 **Actions**:
-1. Read `feature_list.json` to understand items and their status
-2. Read `claude-progress.txt` to understand context and previous work
+1. Read `.feature-dev/active/feature_list.json` to understand items and their status
+2. Read `.feature-dev/active/claude-progress.txt` to understand context and previous work
 3. Read recent git log (last 20 commits) to see changes since last session
 4. Determine current session number by counting "Session N" entries in `claude-progress.txt`
 5. Display: "Session [N]: Implementation"
@@ -259,11 +289,11 @@ Execute this section when `feature_list.json` exists AND has items with status "
 **Goal**: Record progress in artifacts
 
 **Actions**:
-1. Update `feature_list.json`:
+1. Update `.feature-dev/active/feature_list.json`:
    - Set item status to "pass"
    - Set session_completed to current session number
    - **Do not modify any other fields** (id, description, verification are immutable)
-2. Append to `claude-progress.txt`:
+2. Append to `.feature-dev/active/claude-progress.txt`:
    ```
    Session [N] ([date]):
    Completed: [id] ([description])
@@ -291,12 +321,12 @@ Execute this section when `feature_list.json` exists AND has items with status "
 
 # Review Session
 
-Execute this section when `feature_list.json` exists AND all items have status "pass" AND `claude-progress.txt` does NOT contain "Feature complete".
+Execute this section when `.feature-dev/active/feature_list.json` exists AND all items have status "pass" AND `.feature-dev/active/claude-progress.txt` does NOT contain "Feature complete".
 
 ## Step 1: Confirm Completion
 
 **Actions**:
-1. Verify all items in `feature_list.json` have status "pass"
+1. Verify all items in `.feature-dev/active/feature_list.json` have status "pass"
 2. Run all verification commands one final time
 3. If any fail:
    - Report: "Item [id] verification failed"
@@ -318,9 +348,9 @@ Execute this section when `feature_list.json` exists AND all items have status "
 
 ---
 
-## Phase 7: Summary
+## Phase 7: Summary and Finalization
 
-**Goal**: Document what was accomplished
+**Goal**: Document what was accomplished, bump version, and archive artifacts
 
 **Actions**:
 1. Mark all todos complete
@@ -329,16 +359,51 @@ Execute this section when `feature_list.json` exists AND all items have status "
    - Key decisions made
    - Files modified
    - Suggested next steps
-3. Append to `claude-progress.txt`:
+
+3. **Bump version in all version files**:
+   - Read `target_version` and `version_files` from `.feature-dev/active/feature_list.json`
+   - For each file in `version_files`, update version string to `target_version`:
+     - `pyproject.toml`: Update `version = "X.Y.Z"` line
+     - `package.json`: Update `"version": "X.Y.Z"` field
+     - `VERSION` or `.claude/VERSION`: Replace entire content with version
+     - `setup.py`: Update `version="X.Y.Z"` in setup() call
+   - If a version file doesn't exist, skip it (warn user)
+
+4. **Update CHANGELOG.md**:
+   - If CHANGELOG.md doesn't exist, create it with Keep a Changelog header
+   - Prepend new version section at top:
+     ```markdown
+     ## [target_version] - YYYY-MM-DD
+
+     ### Added/Changed/Fixed
+     - [feature description]
+     - [list key items completed]
+
+     Architecture: [approach from feature_list.json]
+     ```
+
+5. Append to `.feature-dev/active/claude-progress.txt`:
    ```
    Session [N] ([date]):
    Code review completed.
    Issues found: [count]
    [List issues and resolutions if any]
+   Version bumped: [current_version] → [target_version]
    Feature complete.
    ```
-4. Ask user: "Ready to commit final state? Proceed?"
-5. If approved, git commit with message: `feat: complete [feature-name] - code review passed`
+
+6. **Archive feature artifacts**:
+   - Create `.feature-dev/completed/[target_version]-[feature-slug]/` directory
+   - Move `.feature-dev/active/feature_list.json` to archive
+   - Move `.feature-dev/active/claude-progress.txt` to archive
+   - Move `.feature-dev/active/init.sh` to archive (if exists)
+   - Remove `.feature-dev/active/` directory (now empty)
+
+7. Ask user: "Ready to commit final state? Proceed?"
+8. If approved:
+   - Stage all changes: version files, CHANGELOG.md, `.feature-dev/completed/`
+   - Git commit with message: `feat: complete [feature-name] v[target_version]`
+   - Suggest: "Consider creating a git tag: `git tag v[target_version]`"
 
 **Feature development complete.**
 
@@ -346,32 +411,57 @@ Execute this section when `feature_list.json` exists AND all items have status "
 
 # Complete State
 
-Execute this section when `claude-progress.txt` contains "Feature complete".
+Execute this section when `.feature-dev/active/claude-progress.txt` contains "Feature complete" OR when `.feature-dev/active/` is empty but `.feature-dev/completed/` has entries.
 
 **Actions**:
-1. Read `feature_list.json` and `claude-progress.txt`
-2. Display summary:
+1. Check for archived features in `.feature-dev/completed/`
+2. Display summary of most recent completed feature:
    ```
-   Feature: [name]
-   Status: COMPLETE
-   Sessions: [count]
-   Items completed: [count]
+   Most Recent Feature: [name]
+   Version: [target_version]
+   Status: ARCHIVED
+   Location: .feature-dev/completed/[version]-[feature]/
    ```
-3. Ask user: "This feature is complete. Would you like to:"
-   - Start a new feature (delete feature_list.json and claude-progress.txt first)
-   - Review the implementation history (display claude-progress.txt)
+3. Ask user: "Would you like to:"
+   - Start a new feature (run this command with a feature description)
+   - Review archived features (list `.feature-dev/completed/` contents)
    - Exit
 
 ---
 
 # Artifact Reference
 
+## Directory Structure
+
+```
+.feature-dev/
+├── active/                              # Current feature in progress
+│   ├── feature_list.json                # Machine-readable work items
+│   ├── claude-progress.txt              # Human-readable session log
+│   └── init.sh                          # Optional startup script
+└── completed/                           # Archived completed features
+    ├── v3.2.0-csv-export/
+    │   ├── feature_list.json
+    │   └── claude-progress.txt
+    └── v4.0.0-launcher-rewrite/
+        ├── feature_list.json
+        └── claude-progress.txt
+```
+
+- `.feature-dev/active/` is gitignored (work in progress)
+- `.feature-dev/completed/` is committed (documentation of completed features)
+
 ## feature_list.json Schema
+
+Location: `.feature-dev/active/feature_list.json`
 
 ```json
 {
   "feature": "string - descriptive name of the feature",
   "created": "string - ISO date (YYYY-MM-DD)",
+  "current_version": "string - version detected at start (e.g., 3.1.1)",
+  "target_version": "string - user-approved target version (e.g., 3.2.0)",
+  "version_files": ["array - files containing version (e.g., pyproject.toml, .claude/VERSION)"],
   "architecture": "string - brief description of chosen approach",
   "init_script": "string (optional) - path to startup script (e.g., ./init.sh)",
   "items": [
@@ -387,13 +477,26 @@ Execute this section when `claude-progress.txt` contains "Feature complete".
 ```
 
 **Rules**:
-- `id`, `description`, and `verification` fields are IMMUTABLE after creation
-- Only `status` and `session_completed` may be modified
+- `id`, `description`, `verification`, `current_version`, `target_version`, `version_files` are IMMUTABLE after creation
+- Only `status` and `session_completed` may be modified during implementation
 - Aim for 10-20+ items for complex features; prefer too many small items over too few large ones
 - Items must be ordered by dependency
 - For web apps, prefer browser automation (Playwright, Puppeteer) verification over unit tests
 
+## Version Files Supported
+
+| File | Pattern | Example |
+|------|---------|---------|
+| `pyproject.toml` | `version = "X.Y.Z"` | Python (Poetry, uv) |
+| `package.json` | `"version": "X.Y.Z"` | JavaScript/Node |
+| `VERSION` | `X.Y.Z` or `vX.Y.Z` | Language-agnostic |
+| `.claude/VERSION` | `vX.Y.Z` | Claude Code projects |
+| `setup.py` | `version="X.Y.Z"` | Python (setuptools) |
+| `Cargo.toml` | `version = "X.Y.Z"` | Rust |
+
 ## claude-progress.txt Format
+
+Location: `.feature-dev/active/claude-progress.txt`
 
 Plain text, human-readable, append-only. Each session entry includes:
 - Session number and date
@@ -401,7 +504,8 @@ Plain text, human-readable, append-only. Each session entry includes:
 - Verification results
 - Smoke test results (for implementation sessions)
 - What the next session should work on
+- Version info (current → target)
 
-The phrase "Feature complete" in this file indicates the feature is done.
+The phrase "Feature complete" in this file indicates the feature is done and triggers archival.
 
 ---

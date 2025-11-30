@@ -192,18 +192,27 @@ Sessions: 5 (1 planning, 3 implementation, 1 review)
 ## Prerequisites
 
 - [Claude Code](https://claude.ai/code) installed and configured
+- The `feature-dev` plugin from Anthropic's claude-code-plugins marketplace (for agents)
 
 ## Installation
 
 ```bash
-# Clone the repository
-git clone --recurse-submodules https://github.com/chuggies510/feature-dev-harnessed.git
+# Add the marketplace (if not already added)
+claude plugin marketplace add anthropics/claude-code
 
-# Or if already cloned without submodules
-git submodule update --init --recursive
+# Install feature-dev (provides the agents)
+claude plugin install feature-dev@anthropics/claude-code
 
-# Install the plugin
-claude plugin install /path/to/feature-dev-harnessed
+# Add feature-dev-harnessed marketplace
+claude plugin marketplace add chuggies510/feature-dev-harnessed
+
+# Install this plugin
+claude plugin install feature-dev-harnessed@chuggies510/feature-dev-harnessed
+```
+
+Or install directly from GitHub:
+```bash
+claude plugin install github:chuggies510/feature-dev-harnessed
 ```
 
 ## Usage
@@ -216,22 +225,39 @@ claude plugin install /path/to/feature-dev-harnessed
 /feature-dev-harnessed:feature-dev
 
 # The command detects state automatically:
-# - No feature_list.json → Planning session
+# - No .feature-dev/active/feature_list.json → Planning session
 # - Pending items → Implementation session
 # - All items complete → Review session
-# - Feature complete → Shows summary
+# - Feature complete → Archives and shows summary
 ```
 
 ## Artifacts
 
+All artifacts are stored in `.feature-dev/`:
+
+```
+.feature-dev/
+├── active/                              # Current feature (gitignored)
+│   ├── feature_list.json
+│   ├── claude-progress.txt
+│   └── init.sh
+└── completed/                           # Archived features (committed)
+    └── v3.2.0-csv-export/
+        ├── feature_list.json
+        └── claude-progress.txt
+```
+
 ### feature_list.json
 
-Machine-readable work items with verification commands. Created in planning session, updated during implementation.
+Machine-readable work items with version tracking and verification commands.
 
 ```json
 {
   "feature": "csv-export-for-cost-reports",
   "created": "2025-11-29",
+  "current_version": "3.1.1",
+  "target_version": "3.2.0",
+  "version_files": ["pyproject.toml", ".claude/VERSION"],
   "architecture": "Pragmatic balance: Add CSV formatter utility...",
   "init_script": "./init.sh",
   "items": [
@@ -252,6 +278,7 @@ Human-readable session log. Append-only. Helps Claude recover context between se
 
 ```
 Feature: csv-export-for-cost-reports
+Version: 3.1.1 → 3.2.0
 Created: 2025-11-29
 
 Session 1 (2025-11-29):
@@ -265,26 +292,27 @@ Verification: PASS
 Next: 002 (Add export button)
 ```
 
-## Updating Agents
+## Versioning
 
-The agents (code-explorer, code-architect, code-reviewer) are pulled from Anthropic's repository via git submodule:
+The plugin automatically detects and manages project versions:
 
-```bash
-# Update to latest upstream agents
-git submodule update --remote vendor/claude-code
-git add vendor/claude-code
-git commit -m "chore: update agents from upstream anthropics/claude-code"
-```
+1. **Detection** (Phase 2): Searches for `pyproject.toml`, `package.json`, `VERSION`, etc.
+2. **Suggestion** (Phase 4): Recommends version bump based on feature scope:
+   - PATCH: Bug fixes
+   - MINOR: New features (default)
+   - MAJOR: Breaking changes
+3. **Bump** (Phase 7): Updates all version files and CHANGELOG.md
+4. **Archive**: Completed features archived to `.feature-dev/completed/{version}-{feature}/`
 
 ## Starting a New Feature
 
-One feature at a time. After completing a feature, delete the artifacts to start fresh:
+Features are archived automatically on completion. To start a new feature, simply run the command with a description:
 
 ```bash
-rm feature_list.json claude-progress.txt
+/feature-dev-harnessed:feature-dev "New feature description"
 ```
 
-Then run the command with a new feature description.
+Previous features are preserved in `.feature-dev/completed/` for reference.
 
 ## Handling Failures
 

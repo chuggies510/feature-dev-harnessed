@@ -1,3 +1,9 @@
-# Runtime artifacts from feature development sessions
+# Feature development - active work in progress (gitignored)
+.feature-dev/active/
+
+# Legacy root-level artifacts (for backwards compatibility)
 feature_list.json
 claude-progress.txt
+init.sh
+
+# Note: .feature-dev/completed/ is NOT ignored - archived features are committed as documentation
