@@ -1,7 +1,7 @@
 ---
 description: Feature development with multi-session harness for large features
 argument-hint: Optional feature description
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Feature Development (Harnessed)
@@ -38,6 +38,7 @@ Before doing anything else, detect current state:
 
 ## Core Principles
 
+- **All work will be reviewed**: Another AI agent will review your code. Shortcuts, simplifications, placeholders, and fallbacks waste time - you'll have to redo them. Write production-quality code from the start.
 - **Ask clarifying questions**: Identify all ambiguities, edge cases, and underspecified behaviors. Ask specific, concrete questions rather than making assumptions. Wait for user answers before proceeding with implementation. Ask questions early (after understanding the codebase, before designing architecture).
 - **Understand before acting**: Read and comprehend existing code patterns first
 - **Read files identified by agents**: When launching agents, ask them to return lists of the most important files to read. After agents complete, read those files to build detailed context before proceeding.
@@ -228,6 +229,7 @@ Execute this section when `.feature-dev/active/feature_list.json` exists AND has
 **Actions**:
 1. For each item in `.feature-dev/active/feature_list.json` with status "pass":
    - If verification starts with "manual:" → skip (manual items don't get smoke tested)
+   - If item has `interactive_verification` → run interactive verification using tmux-cli (see Step 5)
    - Otherwise → run verification command and record result (PASS or FAIL)
 2. If ANY smoke test fails:
    - Report: "REGRESSION DETECTED: Item [id] verification failed"
@@ -273,14 +275,24 @@ Execute this section when `.feature-dev/active/feature_list.json` exists AND has
 **Goal**: Confirm the implementation works
 
 **Actions**:
-1. Check if verification starts with "manual:"
-   - If yes: This is a manual verification
+1. Check verification type:
+   - If verification starts with "manual:" → **Manual verification**
      - Display: "Manual verification required:"
      - Display the text after "manual:" (e.g., "Run the launcher, check the menu looks correct")
      - Ask user: "Did it pass? (y/n)"
      - If user says yes → treat as passed
      - If user says no → ask what's wrong, fix it, ask again
-   - If no: This is an automated verification
+   - If item has `interactive_verification` object → **Interactive verification** (uses tmux-cli)
+     - Launch shell: `tmux-cli launch "zsh"`
+     - Navigate to project: `tmux-cli send --text="cd [project_path]" --pane=[id]`
+     - Launch app: `tmux-cli send --text="[launch command]" --pane=[id]`
+     - Wait: `tmux-cli wait_idle --pane=[id]`
+     - For each input in `inputs`: `tmux-cli send --text="[input]" --pane=[id]`
+     - Capture: `tmux-cli capture --pane=[id]`
+     - Check that ALL patterns in `expect` appear in captured output
+     - Cleanup: `tmux-cli kill --pane=[id]`
+     - If any expect pattern missing → debug, fix, retry
+   - Otherwise → **Automated verification**
      - Run the verification command
      - If it fails:
        - Analyze the failure
@@ -478,6 +490,11 @@ Location: `.feature-dev/active/feature_list.json`
       "id": "string - sequential identifier (001, 002, etc.)",
       "description": "string - what this item accomplishes",
       "verification": "string - shell command returning exit code 0 on success",
+      "interactive_verification": {
+        "launch": "string (optional) - command to start interactive app",
+        "inputs": ["array (optional) - strings to send in order"],
+        "expect": ["array (optional) - patterns that must appear in output"]
+      },
       "status": "string - 'pending' or 'pass'",
       "session_completed": "number or null"
     }
@@ -497,6 +514,14 @@ Location: `.feature-dev/active/feature_list.json`
 - **Manual**: Starts with `manual:` followed by instructions (e.g., `manual: Run the app, verify the menu looks correct`)
   - Manual items prompt the user to confirm pass/fail
   - Manual items are skipped during smoke tests (can't be automated)
+- **Interactive**: Optional `interactive_verification` object for terminal apps that need real TTY
+  - Uses tmux-cli to launch app in real terminal, send inputs, verify output
+  - Fields:
+    - `launch`: Command to start the interactive app (e.g., `python3 script.py`)
+    - `inputs`: Array of strings to send in order (e.g., `["q"]` to quit)
+    - `expect`: Array of patterns that must appear in output (e.g., `["MENU", "QUIT"]`)
+  - Example: Testing a TUI launcher that detects piped input as non-interactive
+  - Execution: `tmux-cli launch` → `tmux-cli send` for each input → `tmux-cli capture` → check expect patterns
 
 ## Version Files Supported
 
