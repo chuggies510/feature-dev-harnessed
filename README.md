@@ -197,17 +197,17 @@ Sessions: 5 (1 planning, 3 implementation, 1 review)
 ## Installation
 
 ```bash
-# Add the marketplace (if not already added)
+# Add Anthropic's marketplace (if not already added)
 claude plugin marketplace add anthropics/claude-code
 
 # Install feature-dev (provides the agents)
-claude plugin install feature-dev@anthropics/claude-code
+claude plugin install feature-dev@claude-code
 
 # Add feature-dev-harnessed marketplace
 claude plugin marketplace add chuggies510/feature-dev-harnessed
 
-# Install this plugin
-claude plugin install feature-dev-harnessed@chuggies510/feature-dev-harnessed
+# Install this plugin (note: marketplace name is just the repo name)
+claude plugin install feature-dev-harnessed@feature-dev-harnessed
 ```
 
 Or install directly from GitHub:
