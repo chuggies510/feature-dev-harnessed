@@ -223,13 +223,18 @@ claude plugin install github:chuggies510/feature-dev-harnessed
 
 # Continue implementation (subsequent sessions)
 /feature-dev-harnessed:feature-dev
-
-# The command detects state automatically:
-# - No .feature-dev/active/feature_list.json → Planning session
-# - Pending items → Implementation session
-# - All items complete → Review session
-# - Feature complete → Archives and shows summary
 ```
+
+### State Detection
+
+The command automatically detects what to do based on filesystem state:
+
+| Condition | State | Action |
+|-----------|-------|--------|
+| No `.feature-dev/active/feature_list.json` | New feature | Run phases 1-4, create artifacts |
+| `feature_list.json` exists with pending items | Mid-implementation | Run one item, verify, commit |
+| All items pass, not reviewed | Ready for review | Run phases 6-7 |
+| `claude-progress.txt` contains "Feature complete" | Complete | Archive and summarize |
 
 ## Artifacts
 
@@ -482,10 +487,6 @@ Write clear progress entries to help future sessions understand context.
 - **Review agent outputs**: Agents surface insights about your codebase you might not know
 - **Don't skip phases**: Each phase builds context for the next
 - **Never delete or modify existing tests**: Add new tests, never remove or weaken existing ones
-
-## Technical Details
-
-See [feature-dev-harnessed-spec.md](feature-dev-harnessed-spec.md) for the complete specification.
 
 ## Credits
 

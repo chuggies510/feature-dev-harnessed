@@ -90,5 +90,5 @@ claude plugin install github:chuggies510/feature-dev-harnessed
 
 ## Reference Documents
 
-- `feature-dev-harnessed-spec.md`: Complete specification with artifact schemas
-- `README.md`: User-facing documentation
+- `README.md`: Complete user documentation with workflow, installation, and best practices
+- `commands/feature-dev.md`: Implementation details and artifact schemas
