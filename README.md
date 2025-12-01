@@ -405,12 +405,23 @@ Bad examples:
 # Too vague - doesn't verify the specific deliverable
 python3 -c 'import utils'
 
-# Manual verification - can't be automated
-echo "Check if the button looks right"
-
 # Unit test when E2E would be better (for web features)
 python3 -c 'assert CsvFormatter().format([]) == ""'  # Doesn't verify UI works
 ```
+
+### Manual Verification
+
+Some items can't be verified by a computer (visual checks, interactive testing). Use `manual:` prefix:
+
+```json
+{
+  "verification": "manual: Run the launcher, navigate all menus, verify theme looks like SMB3"
+}
+```
+
+Claude will prompt: *"Manual verification required: Run the launcher, navigate all menus, verify theme looks like SMB3. Did it pass? (y/n)"*
+
+Manual items are skipped during smoke tests since they can't be automated.
 
 ### Using init.sh
 

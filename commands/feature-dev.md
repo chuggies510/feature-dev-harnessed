@@ -225,9 +225,9 @@ Execute this section when `.feature-dev/active/feature_list.json` exists AND has
 **Prerequisite**: Init script (if defined) must have completed successfully in Step 1.
 
 **Actions**:
-1. For each item in `feature_list.json` with status "pass":
-   - Run its verification command
-   - Record result (PASS or FAIL)
+1. For each item in `.feature-dev/active/feature_list.json` with status "pass":
+   - If verification starts with "manual:" → skip (manual items don't get smoke tested)
+   - Otherwise → run verification command and record result (PASS or FAIL)
 2. If ANY smoke test fails:
    - Report: "REGRESSION DETECTED: Item [id] verification failed"
    - Display the failed command and output
@@ -272,13 +272,21 @@ Execute this section when `.feature-dev/active/feature_list.json` exists AND has
 **Goal**: Confirm the implementation works
 
 **Actions**:
-1. Run the item's verification command
-2. If it fails:
-   - Analyze the failure
-   - Debug and fix
-   - Re-run verification
-   - Repeat until it passes
-3. If it passes:
+1. Check if verification starts with "manual:"
+   - If yes: This is a manual verification
+     - Display: "Manual verification required:"
+     - Display the text after "manual:" (e.g., "Run the launcher, check the menu looks correct")
+     - Ask user: "Did it pass? (y/n)"
+     - If user says yes → treat as passed
+     - If user says no → ask what's wrong, fix it, ask again
+   - If no: This is an automated verification
+     - Run the verification command
+     - If it fails:
+       - Analyze the failure
+       - Debug and fix
+       - Re-run verification
+       - Repeat until it passes
+2. When verification passes:
    - Display: "Verification PASSED"
    - Proceed to state update
 
@@ -482,6 +490,12 @@ Location: `.feature-dev/active/feature_list.json`
 - Aim for 10-20+ items for complex features; prefer too many small items over too few large ones
 - Items must be ordered by dependency
 - For web apps, prefer browser automation (Playwright, Puppeteer) verification over unit tests
+
+**Verification types**:
+- **Automated**: A shell command that returns exit code 0 on success (e.g., `python3 -m pytest tests/`)
+- **Manual**: Starts with `manual:` followed by instructions (e.g., `manual: Run the app, verify the menu looks correct`)
+  - Manual items prompt the user to confirm pass/fail
+  - Manual items are skipped during smoke tests (can't be automated)
 
 ## Version Files Supported
 
