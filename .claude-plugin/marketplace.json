@@ -7,6 +7,8 @@
     "name": "chuggies510",
     "email": ""
   },
+  "repository": "https://github.com/chuggies510/feature-dev-harnessed",
+  "license": "MIT",
   "plugins": [
     {
       "name": "feature-dev-harnessed",
@@ -17,7 +19,9 @@
         "email": ""
       },
       "source": "./",
-      "category": "development"
+      "category": "development",
+      "repository": "https://github.com/chuggies510/feature-dev-harnessed",
+      "license": "MIT"
     }
   ]
 }

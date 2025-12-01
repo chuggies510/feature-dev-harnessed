@@ -1,6 +1,7 @@
 ---
 description: Feature development with multi-session harness for large features
 argument-hint: Optional feature description
+version: 1.0.0
 ---
 
 # Feature Development (Harnessed)
