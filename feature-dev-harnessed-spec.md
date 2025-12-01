@@ -554,7 +554,7 @@ User-facing documentation with installation and usage instructions.
 
 ### Step 7: Test the plugin
 ```bash
-claude plugin install /Users/chris/2_project-files/projects/active-projects/feature-dev-harnessed
+claude plugin install github:chuggies510/feature-dev-harnessed
 ```
 
 ---
@@ -566,7 +566,7 @@ claude plugin install /Users/chris/2_project-files/projects/active-projects/feat
 **What was done:**
 - Read and understood the spec
 - Fetched all source materials (Anthropic harness blog, Claude 4 best practices, autonomous-coding quickstart, feature-dev plugin files)
-- Confirmed implementation location: `/Users/chris/2_project-files/projects/active-projects/feature-dev-harnessed/`
+- Confirmed implementation location: `github:chuggies510/feature-dev-harnessed`
 - Confirmed: build everything with git commits, then test
 
 **Key files fetched from feature-dev plugin:**
@@ -593,7 +593,7 @@ claude plugin install /Users/chris/2_project-files/projects/active-projects/feat
 7. Modify `commands/feature-dev.md` to add harness logic (main work)
 8. Create `README.md`
 9. Git commit
-10. Test: `claude plugin install /Users/chris/2_project-files/projects/active-projects/feature-dev-harnessed`
+10. Test: `claude plugin install github:chuggies510/feature-dev-harnessed`
 
 ---
 
