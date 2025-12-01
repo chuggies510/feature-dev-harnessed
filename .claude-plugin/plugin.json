@@ -1,6 +1,6 @@
 {
   "name": "feature-dev-harnessed",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Feature development with integrated harness for multi-session execution. Fork of Anthropic's feature-dev with their long-running agent pattern.",
   "author": {
     "name": "chuggies510",
