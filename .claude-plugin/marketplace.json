@@ -1,11 +1,9 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "feature-dev-harnessed",
   "version": "1.0.0",
   "description": "Feature development with multi-session harness for large features",
   "owner": {
-    "name": "chuggies510",
-    "email": ""
+    "name": "chuggies510"
   },
   "repository": "https://github.com/chuggies510/feature-dev-harnessed",
   "license": "MIT",
@@ -15,13 +13,9 @@
       "version": "1.0.0",
       "description": "Feature development with integrated harness for multi-session execution. Fork of Anthropic's feature-dev with their long-running agent pattern.",
       "author": {
-        "name": "chuggies510",
-        "email": ""
+        "name": "chuggies510"
       },
-      "source": "./",
-      "category": "development",
-      "repository": "https://github.com/chuggies510/feature-dev-harnessed",
-      "license": "MIT"
+      "source": "./"
     }
   ]
 }

@@ -24,11 +24,11 @@ feature-dev-harnessed/
 
 ## Feature Development Directory
 
-When using this plugin in a project, artifacts are stored in `.feature-dev/`:
+When using this plugin in a project, artifacts are stored in `dev/features/`:
 
 ```
 project/
-└── .feature-dev/
+└── dev/features/
     ├── active/                        # Current feature (gitignored)
     │   ├── feature_list.json
     │   ├── claude-progress.txt
@@ -45,7 +45,7 @@ The command auto-detects state from the filesystem:
 
 | Condition | State | Action |
 |-----------|-------|--------|
-| No `.feature-dev/active/feature_list.json` | New feature | Run phases 1-4, create artifacts |
+| No `dev/features/active/feature_list.json` | New feature | Run phases 1-4, create artifacts |
 | `feature_list.json` has pending items | Mid-implementation | Run one item |
 | All items pass, not reviewed | Ready for review | Run phases 6-7 |
 | `claude-progress.txt` contains "Feature complete" | Done | Archive and summarize |
@@ -57,7 +57,7 @@ The plugin automatically manages project versions:
 1. **Detection** (Phase 2): Finds version files (pyproject.toml, package.json, VERSION, etc.)
 2. **Suggestion** (Phase 4): Recommends version bump based on feature scope
 3. **Bump** (Phase 7): Updates all version files and CHANGELOG.md
-4. **Archive**: Moves artifacts to `.feature-dev/completed/{version}-{feature}/`
+4. **Archive**: Moves artifacts to `dev/features/completed/{version}-{feature}/`
 
 ## Key Behaviors
 

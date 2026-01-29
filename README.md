@@ -231,17 +231,17 @@ The command automatically detects what to do based on filesystem state:
 
 | Condition | State | Action |
 |-----------|-------|--------|
-| No `.feature-dev/active/feature_list.json` | New feature | Run phases 1-4, create artifacts |
+| No `dev/features/active/feature_list.json` | New feature | Run phases 1-4, create artifacts |
 | `feature_list.json` exists with pending items | Mid-implementation | Run one item, verify, commit |
 | All items pass, not reviewed | Ready for review | Run phases 6-7 |
 | `claude-progress.txt` contains "Feature complete" | Complete | Archive and summarize |
 
 ## Artifacts
 
-All artifacts are stored in `.feature-dev/`:
+All artifacts are stored in `dev/features/`:
 
 ```
-.feature-dev/
+dev/features/
 ├── active/                              # Current feature (gitignored)
 │   ├── feature_list.json
 │   ├── claude-progress.txt
@@ -307,7 +307,7 @@ The plugin automatically detects and manages project versions:
    - MINOR: New features (default)
    - MAJOR: Breaking changes
 3. **Bump** (Phase 7): Updates all version files and CHANGELOG.md
-4. **Archive**: Completed features archived to `.feature-dev/completed/{version}-{feature}/`
+4. **Archive**: Completed features archived to `dev/features/completed/{version}-{feature}/`
 
 ## Starting a New Feature
 
@@ -317,7 +317,7 @@ Features are archived automatically on completion. To start a new feature, simpl
 /feature-dev-harnessed:feature-dev "New feature description"
 ```
 
-Previous features are preserved in `.feature-dev/completed/` for reference.
+Previous features are preserved in `dev/features/completed/` for reference.
 
 ## Handling Failures
 

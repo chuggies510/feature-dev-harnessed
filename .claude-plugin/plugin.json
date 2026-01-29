@@ -3,10 +3,6 @@
   "version": "1.1.0",
   "description": "Feature development with integrated harness for multi-session execution. Fork of Anthropic's feature-dev with their long-running agent pattern.",
   "author": {
-    "name": "chuggies510",
-    "email": ""
-  },
-  "repository": "https://github.com/chuggies510/feature-dev-harnessed",
-  "license": "MIT",
-  "keywords": ["feature-development", "harness", "multi-session", "planning", "architecture"]
+    "name": "chuggies510"
+  }
 }

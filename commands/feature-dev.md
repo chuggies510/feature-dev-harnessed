@@ -11,7 +11,7 @@ You are helping a developer implement a new feature using a multi-session harnes
 ## How This Works
 
 This command detects state from the filesystem and executes the appropriate phase:
-- **No `.feature-dev/active/feature_list.json`**: Run planning phases (1-4), then create artifacts
+- **No `dev/features/active/feature_list.json`**: Run planning phases (1-4), then create artifacts
 - **`feature_list.json` with pending items**: Run one implementation cycle
 - **All items complete, not reviewed**: Run quality review phases (6-7)
 - **Feature complete**: Archive and summarize
@@ -22,17 +22,17 @@ This command detects state from the filesystem and executes the appropriate phas
 
 Before doing anything else, detect current state:
 
-1. Check if `.feature-dev/active/feature_list.json` exists
+1. Check if `dev/features/active/feature_list.json` exists
 2. If it exists, read it and check item statuses
-3. If `.feature-dev/active/claude-progress.txt` exists, check if it contains "Feature complete"
+3. If `dev/features/active/claude-progress.txt` exists, check if it contains "Feature complete"
 
 **State determination:**
-- If `.feature-dev/active/feature_list.json` does NOT exist → Execute **Planning Session**
+- If `dev/features/active/feature_list.json` does NOT exist → Execute **Planning Session**
 - If `feature_list.json` exists AND has items with status "pending" → Execute **Implementation Session**
 - If `feature_list.json` exists AND all items have status "pass" AND `claude-progress.txt` does NOT contain "Feature complete" → Execute **Review Session**
 - If `claude-progress.txt` contains "Feature complete" → Execute **Complete State**
 
-**Artifact location:** All feature development artifacts are stored in `.feature-dev/active/` during development. On completion, they are archived to `.feature-dev/completed/{version}-{feature}/`.
+**Artifact location:** All feature development artifacts are stored in `dev/features/active/` during development. On completion, they are archived to `dev/features/completed/{version}-{feature}/`.
 
 ---
 
@@ -145,8 +145,8 @@ If the user says "whatever you think is best", provide your recommendation and g
 
 **Actions**:
 1. Wait for explicit user approval of architecture approach and target version
-2. Create `.feature-dev/active/` directory if it doesn't exist
-3. Create `.feature-dev/active/feature_list.json` with the following structure:
+2. Create `dev/features/active/` directory if it doesn't exist
+3. Create `dev/features/active/feature_list.json` with the following structure:
    ```json
    {
      "feature": "descriptive name of the feature",
@@ -184,7 +184,7 @@ If the user says "whatever you think is best", provide your recommendation and g
    - Basic health checks
    - Any environment setup
    - Make it executable: `chmod +x init.sh`
-8. Create `.feature-dev/active/claude-progress.txt` with initial entry:
+8. Create `dev/features/active/claude-progress.txt` with initial entry:
    ```
    Feature: [feature name]
    Version: [current_version] → [target_version]
@@ -205,13 +205,13 @@ If the user says "whatever you think is best", provide your recommendation and g
 
 # Implementation Session
 
-Execute this section when `.feature-dev/active/feature_list.json` exists AND has items with status "pending".
+Execute this section when `dev/features/active/feature_list.json` exists AND has items with status "pending".
 
 ## Step 1: Read State and Initialize
 
 **Actions**:
-1. Read `.feature-dev/active/feature_list.json` to understand items and their status
-2. Read `.feature-dev/active/claude-progress.txt` to understand context and previous work
+1. Read `dev/features/active/feature_list.json` to understand items and their status
+2. Read `dev/features/active/claude-progress.txt` to understand context and previous work
 3. Read recent git log (last 20 commits) to see changes since last session
 4. Determine current session number by counting "Session N" entries in `claude-progress.txt`
 5. Display: "Session [N]: Implementation"
@@ -227,7 +227,7 @@ Execute this section when `.feature-dev/active/feature_list.json` exists AND has
 **Prerequisite**: Init script (if defined) must have completed successfully in Step 1.
 
 **Actions**:
-1. For each item in `.feature-dev/active/feature_list.json` with status "pass":
+1. For each item in `dev/features/active/feature_list.json` with status "pass":
    - If verification starts with "manual:" → skip (manual items don't get smoke tested)
    - If item has `interactive_verification` → run interactive verification using tmux-cli (see Step 5)
    - Otherwise → run verification command and record result (PASS or FAIL)
@@ -310,11 +310,11 @@ Execute this section when `.feature-dev/active/feature_list.json` exists AND has
 **Goal**: Record progress in artifacts
 
 **Actions**:
-1. Update `.feature-dev/active/feature_list.json`:
+1. Update `dev/features/active/feature_list.json`:
    - Set item status to "pass"
    - Set session_completed to current session number
    - **Do not modify any other fields** (id, description, verification are immutable)
-2. Append to `.feature-dev/active/claude-progress.txt`:
+2. Append to `dev/features/active/claude-progress.txt`:
    ```
    Session [N] ([date]):
    Completed: [id] ([description])
@@ -342,12 +342,12 @@ Execute this section when `.feature-dev/active/feature_list.json` exists AND has
 
 # Review Session
 
-Execute this section when `.feature-dev/active/feature_list.json` exists AND all items have status "pass" AND `.feature-dev/active/claude-progress.txt` does NOT contain "Feature complete".
+Execute this section when `dev/features/active/feature_list.json` exists AND all items have status "pass" AND `dev/features/active/claude-progress.txt` does NOT contain "Feature complete".
 
 ## Step 1: Confirm Completion
 
 **Actions**:
-1. Verify all items in `.feature-dev/active/feature_list.json` have status "pass"
+1. Verify all items in `dev/features/active/feature_list.json` have status "pass"
 2. Run all verification commands one final time
 3. If any fail:
    - Report: "Item [id] verification failed"
@@ -382,7 +382,7 @@ Execute this section when `.feature-dev/active/feature_list.json` exists AND all
    - Suggested next steps
 
 3. **Bump version in all version files**:
-   - Read `target_version` and `version_files` from `.feature-dev/active/feature_list.json`
+   - Read `target_version` and `version_files` from `dev/features/active/feature_list.json`
    - For each file in `version_files`, update version string to `target_version`:
      - `pyproject.toml`: Update `version = "X.Y.Z"` line
      - `package.json`: Update `"version": "X.Y.Z"` field
@@ -403,7 +403,7 @@ Execute this section when `.feature-dev/active/feature_list.json` exists AND all
      Architecture: [approach from feature_list.json]
      ```
 
-5. Append to `.feature-dev/active/claude-progress.txt`:
+5. Append to `dev/features/active/claude-progress.txt`:
    ```
    Session [N] ([date]):
    Code review completed.
@@ -414,15 +414,15 @@ Execute this section when `.feature-dev/active/feature_list.json` exists AND all
    ```
 
 6. **Archive feature artifacts**:
-   - Create `.feature-dev/completed/[target_version]-[feature-slug]/` directory
-   - Move `.feature-dev/active/feature_list.json` to archive
-   - Move `.feature-dev/active/claude-progress.txt` to archive
-   - Move `.feature-dev/active/init.sh` to archive (if exists)
-   - Remove `.feature-dev/active/` directory (now empty)
+   - Create `dev/features/completed/[target_version]-[feature-slug]/` directory
+   - Move `dev/features/active/feature_list.json` to archive
+   - Move `dev/features/active/claude-progress.txt` to archive
+   - Move `dev/features/active/init.sh` to archive (if exists)
+   - Remove `dev/features/active/` directory (now empty)
 
 7. Ask user: "Ready to commit final state? Proceed?"
 8. If approved:
-   - Stage all changes: version files, CHANGELOG.md, `.feature-dev/completed/`
+   - Stage all changes: version files, CHANGELOG.md, `dev/features/completed/`
    - Git commit with message: `feat: complete [feature-name] v[target_version]`
    - Suggest: "Consider creating a git tag: `git tag v[target_version]`"
 
@@ -432,20 +432,20 @@ Execute this section when `.feature-dev/active/feature_list.json` exists AND all
 
 # Complete State
 
-Execute this section when `.feature-dev/active/claude-progress.txt` contains "Feature complete" OR when `.feature-dev/active/` is empty but `.feature-dev/completed/` has entries.
+Execute this section when `dev/features/active/claude-progress.txt` contains "Feature complete" OR when `dev/features/active/` is empty but `dev/features/completed/` has entries.
 
 **Actions**:
-1. Check for archived features in `.feature-dev/completed/`
+1. Check for archived features in `dev/features/completed/`
 2. Display summary of most recent completed feature:
    ```
    Most Recent Feature: [name]
    Version: [target_version]
    Status: ARCHIVED
-   Location: .feature-dev/completed/[version]-[feature]/
+   Location: dev/features/completed/[version]-[feature]/
    ```
 3. Ask user: "Would you like to:"
    - Start a new feature (run this command with a feature description)
-   - Review archived features (list `.feature-dev/completed/` contents)
+   - Review archived features (list `dev/features/completed/` contents)
    - Exit
 
 ---
@@ -455,7 +455,7 @@ Execute this section when `.feature-dev/active/claude-progress.txt` contains "Fe
 ## Directory Structure
 
 ```
-.feature-dev/
+dev/features/
 ├── active/                              # Current feature in progress
 │   ├── feature_list.json                # Machine-readable work items
 │   ├── claude-progress.txt              # Human-readable session log
@@ -469,12 +469,12 @@ Execute this section when `.feature-dev/active/claude-progress.txt` contains "Fe
         └── claude-progress.txt
 ```
 
-- `.feature-dev/active/` is gitignored (work in progress)
-- `.feature-dev/completed/` is committed (documentation of completed features)
+- `dev/features/active/` is gitignored in consuming projects (work in progress)
+- `dev/features/completed/` is committed (documentation of completed features)
 
 ## feature_list.json Schema
 
-Location: `.feature-dev/active/feature_list.json`
+Location: `dev/features/active/feature_list.json`
 
 ```json
 {
@@ -536,7 +536,7 @@ Location: `.feature-dev/active/feature_list.json`
 
 ## claude-progress.txt Format
 
-Location: `.feature-dev/active/claude-progress.txt`
+Location: `dev/features/active/claude-progress.txt`
 
 Plain text, human-readable, append-only. Each session entry includes:
 - Session number and date
