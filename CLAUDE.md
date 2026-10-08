@@ -92,7 +92,3 @@ claude plugin install github:chuggies510/feature-dev-harnessed
 
 - `README.md`: Complete user documentation with workflow, installation, and best practices
 - `commands/feature-dev.md`: Implementation details and artifact schemas
-
-## Chuggies Bot
-
-@chuggies_bot is a Telegram-based AI assistant that reads memory banks and issues across repos. It runs on Dev Pi (192.168.3.4) via OpenClaw. Your memory bank handoffs are consumed by the bot's nightly refresh (2am Pacific) — keep active-context.md structured and current.
